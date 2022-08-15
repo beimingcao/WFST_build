@@ -101,6 +101,47 @@ def build_F_WFST(encoded_path_list, F_WFST_score, add_backarc = True):
    
     return f
 
+def make_iosymbol_list(path_list, units_path, FST_name = 'F_WFST'):
+
+    f = open(units_path, 'r')
+    units = f.readlines()
+    f.close()
+    token_list = []
+    code_list = []
+    for l in units:
+        l = l.strip().split(' ')
+        token_list.append(l[0])
+        code_list.append(l[1])
+    
+    all_p = []
+    for p in path_list:
+        all_p += p
+
+    unique_symbols = []
+    for x in all_p:
+        if x not in unique_symbols:
+            unique_symbols.append(x)
+
+    with open(FST_name + '_isym.fst', 'w') as f:
+        f.write('<eps> 0')
+        f.write('\n')
+        for sym in unique_symbols:
+            idx = str(int(code_list[token_list.index(sym)]) + 1)
+            f.write(sym)
+            f.write(' ')
+            f.write(idx + '\n')
+
+
+    with open(FST_name + '_osym.fst', 'w') as f:
+        f.write('<eps> 0')
+        f.write('\n')
+        for sym in unique_symbols:
+            idx = str(int(code_list[token_list.index(sym)]) + 1)
+            f.write(sym)
+            f.write(' ')
+            f.write(idx + '\n')
+    return unique_symbols
+
 
 if __name__=='__main__':
     import argparse
@@ -129,7 +170,7 @@ if __name__=='__main__':
  
     encoded_path_list = encode_paths(path_list, units_path)
     F_WFST = build_F_WFST(encoded_path_list, F_WFST_score, add_backarc = F_WFST_backtrack)
-    print(F_WFST)
 
-
-
+    F_WFST.write('F_WFST')
+    make_iosymbol_list(path_list, units_path)
+    F_WFST.draw('F_WFST.gv') 

@@ -35,7 +35,7 @@ def contact2paths(contact_list, sp_path, win_size=999, word_level=False):
 
         if word_level == False:
             if len(contact_token) > win_size:
-                    for i in range(len(contact_token)-win_size):
+                    for i in range(len(contact_token)-win_size+1):
                         path_list.append(contact_token[i:i+win_size])
             else:
                 path_list.append(contact_token)
@@ -82,12 +82,46 @@ def build_F_WFST(encoded_path_list, F_WFST_score, add_backarc = True):
         f.add_arc(states[0], fst.Arc(p[0], p[0], fst.Weight(f.weight_type(),F_WFST_score), states[state_idx]))
         if add_backarc == True:
             f.add_arc(states[state_idx], fst.Arc(p[0], p[0], fst.Weight(f.weight_type(),F_WFST_score), states[0]))
-        for i in range(len(p)):
+        for i in range(len(p)-1):
             states[state_idx + 1] = f.add_state()
-            f.add_arc(states[state_idx], fst.Arc(p[i], p[i], fst.Weight(f.weight_type(),F_WFST_score), states[state_idx+1]))
+            f.add_arc(states[state_idx], fst.Arc(p[i+1], p[i+1], fst.Weight(f.weight_type(),F_WFST_score), states[state_idx+1]))
            
             if add_backarc == True:
                 f.add_arc(states[state_idx+1], fst.Arc(0, 0, fst.Weight(f.weight_type(), F_WFST_score*(-1-i)), states[0]))
+            state_idx += 1
+
+        if add_backarc == False:
+            f.set_final(states[state_idx])
+
+    if add_backarc == True:
+        f.set_final(states[0])
+
+    f = fst.determinize(f)
+ #   f.minimize()
+   
+    return f
+
+def build_B_WFST(encoded_path_list, B_WFST_score, add_backarc = False):
+    import openfst_python as fst
+
+    f = fst.Fst()
+    states = {}
+    states[0] = f.add_state()
+    
+    f.set_start(states[0])
+    state_idx = 1
+    for p in encoded_path_list:
+        
+        states[state_idx] = f.add_state()
+        f.add_arc(states[0], fst.Arc(p[0], p[0], fst.Weight(f.weight_type(),B_WFST_score), states[state_idx]))
+        if add_backarc == True:
+            f.add_arc(states[state_idx], fst.Arc(p[0], p[0], fst.Weight(f.weight_type(),B_WFST_score), states[0]))
+        for i in range(len(p)-1):
+            states[state_idx + 1] = f.add_state()
+            f.add_arc(states[state_idx], fst.Arc(p[i+1], p[i+1], fst.Weight(f.weight_type(),B_WFST_score), states[state_idx+1]))
+           
+            if add_backarc == True:
+                f.add_arc(states[state_idx+1], fst.Arc(0, 0, fst.Weight(f.weight_type(), B_WFST_score*(-1-i)), states[0]))
             state_idx += 1
 
         if add_backarc == False:
@@ -162,15 +196,30 @@ if __name__=='__main__':
     sp_path = config['LM_setup']['sp_path']
     units_path = config['LM_setup']['unit_path']
 
-    path_list = contact2paths(contact_list, sp_path = sp_path, win_size = win_size, word_level = word_level)
+    ######### Build Forward WFST #########
+
+    f_path_list = contact2paths(contact_list, sp_path = sp_path, win_size = win_size, word_level = word_level)
 
     F_WFST_score = config['LM_setup']['F_WFST_score']
     F_WFST_backtrack = config['F_WFST_setup']['back_track']
-    B_WFST_score = config['LM_setup']['B_WFST_score']
  
-    encoded_path_list = encode_paths(path_list, units_path)
+    encoded_path_list = encode_paths(f_path_list, units_path)
     F_WFST = build_F_WFST(encoded_path_list, F_WFST_score, add_backarc = F_WFST_backtrack)
 
-    F_WFST.write('F_WFST')
-    make_iosymbol_list(path_list, units_path)
-    F_WFST.draw('F_WFST.gv') 
+    F_WFST.write('F_WFST.model')
+    make_iosymbol_list(f_path_list, units_path)
+    ######### Build Backward WFST #########
+    B_WFST_score = config['LM_setup']['B_WFST_score']
+
+    b_path_list = contact2paths(contact_list, sp_path, win_size=2, word_level=False)
+    back_path_list = []
+    for p in b_path_list:
+        pb = p.copy()
+        pb.reverse()
+        back_path_list.append(pb)
+    b_encoded_path_list = encode_paths(back_path_list, units_path)
+    B_WFST = build_F_WFST(b_encoded_path_list, B_WFST_score, add_backarc = False)   
+
+    B_WFST.write('B_WFST.model')
+    make_iosymbol_list(back_path_list, units_path)
+

@@ -11,7 +11,7 @@ LM_setup:
         B_LM_order: 2
 
 F_WFST_setup:
-        back_track: False
+        back_track: True
         trie_base: False
         word_level: False
         win_size: 999

@@ -60,7 +60,8 @@ def encode_paths(path_list, units_path):
     for p in path_list:
         p_l = []
         for t in p:
-            p_l += [int(code_list[token_list.index(t)])]
+            # Add 1, since wfst require eps to be 0
+            p_l += [int(code_list[token_list.index(t)])+1]
 
         encoded_path_list.append(p_l)
 
@@ -68,23 +69,30 @@ def encode_paths(path_list, units_path):
 
 def build_F_WFST(encoded_path_list, F_WFST_score, add_backarc = True):
     import openfst_python as fst
-    eps = '<eps>'
 
     f = fst.Fst()
     states = {}
     states[0] = f.add_state()
     
     f.set_start(states[0])
-    f.set_final(states[0])
     state_idx = 1
     for p in encoded_path_list:
-        print(p)
+        
+        states[state_idx] = f.add_state()
+        f.add_arc(states[0], fst.Arc(p[0], p[0], fst.Weight(f.weight_type(),F_WFST_score), states[state_idx]))
         for i in range(len(p)):
-            states[state_idx] = f.add_state()
-            f.add_arc(states[i], fst.Arc(p[i], p[i], fst.Weight(f.weight_type(),F_WFST_score), states[state_idx]))
-
+            states[state_idx + 1] = f.add_state()
+            f.add_arc(states[state_idx], fst.Arc(p[i], p[i], fst.Weight(f.weight_type(),F_WFST_score), states[state_idx+1]))
+           
+            if add_backarc == True:
+                f.add_arc(states[state_idx+1], fst.Arc(0, 0, fst.Weight(f.weight_type(), F_WFST_score*(1-i)), states[0]))
             state_idx += 1
 
+        if add_backarc == False:
+            f.set_final(states[state_idx])
+
+    if add_backarc == True:
+        f.set_final(states[0])
    
     return f
 
@@ -111,12 +119,11 @@ if __name__=='__main__':
     path_list = contact2paths(contact_list, sp_path = sp_path, win_size = win_size, word_level = word_level)
 
     F_WFST_score = config['LM_setup']['F_WFST_score']
+    F_WFST_backtrack = config['F_WFST_setup']['back_track']
     B_WFST_score = config['LM_setup']['B_WFST_score']
  
     encoded_path_list = encode_paths(path_list, units_path)
-    print(encoded_path_list)
-    
-    F_WFST = build_F_WFST(encoded_path_list, F_WFST_score)
+    F_WFST = build_F_WFST(encoded_path_list, F_WFST_score, add_backarc = F_WFST_backtrack)
     print(F_WFST)
 
 

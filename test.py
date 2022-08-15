@@ -80,12 +80,14 @@ def build_F_WFST(encoded_path_list, F_WFST_score, add_backarc = True):
         
         states[state_idx] = f.add_state()
         f.add_arc(states[0], fst.Arc(p[0], p[0], fst.Weight(f.weight_type(),F_WFST_score), states[state_idx]))
+        if add_backarc == True:
+            f.add_arc(states[state_idx], fst.Arc(p[0], p[0], fst.Weight(f.weight_type(),F_WFST_score), states[0]))
         for i in range(len(p)):
             states[state_idx + 1] = f.add_state()
             f.add_arc(states[state_idx], fst.Arc(p[i], p[i], fst.Weight(f.weight_type(),F_WFST_score), states[state_idx+1]))
            
             if add_backarc == True:
-                f.add_arc(states[state_idx+1], fst.Arc(0, 0, fst.Weight(f.weight_type(), F_WFST_score*(1-i)), states[0]))
+                f.add_arc(states[state_idx+1], fst.Arc(0, 0, fst.Weight(f.weight_type(), F_WFST_score*(-1-i)), states[0]))
             state_idx += 1
 
         if add_backarc == False:
@@ -93,6 +95,9 @@ def build_F_WFST(encoded_path_list, F_WFST_score, add_backarc = True):
 
     if add_backarc == True:
         f.set_final(states[0])
+
+    f = fst.determinize(f)
+ #   f.minimize()
    
     return f
 

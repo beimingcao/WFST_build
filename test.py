@@ -43,6 +43,52 @@ def contact2paths(contact_list, sp_path, win_size=999, word_level=False):
     return path_list
 
 
+def encode_paths(path_list, units_path):
+
+    f = open(units_path, 'r')
+    units = f.readlines()
+    f.close()
+    token_list = []
+    code_list = []
+    for l in units:
+        l = l.strip().split(' ')
+        token_list.append(l[0])
+        code_list.append(l[1])
+    
+    encoded_path_list = []
+
+    for p in path_list:
+        p_l = []
+        for t in p:
+            p_l += [int(code_list[token_list.index(t)])]
+
+        encoded_path_list.append(p_l)
+
+    return encoded_path_list
+
+def build_F_WFST(encoded_path_list, F_WFST_score, add_backarc = True):
+    import openfst_python as fst
+    eps = '<eps>'
+
+    f = fst.Fst()
+    states = {}
+    states[0] = f.add_state()
+    
+    f.set_start(states[0])
+    f.set_final(states[0])
+    state_idx = 1
+    for p in encoded_path_list:
+        print(p)
+        for i in range(len(p)):
+            states[state_idx] = f.add_state()
+            f.add_arc(states[i], fst.Arc(p[i], p[i], fst.Weight(f.weight_type(),F_WFST_score), states[state_idx]))
+
+            state_idx += 1
+
+   
+    return f
+
+
 if __name__=='__main__':
     import argparse
     parser = argparse.ArgumentParser()
@@ -57,8 +103,21 @@ if __name__=='__main__':
     trie_base = config['F_WFST_setup']['trie_base']
     word_level = config['F_WFST_setup']['word_level']
     win_size = config['F_WFST_setup']['win_size']
-    sp_path = config['token_setup']['sp_path']
+    F_LM_name = config['LM_setup']['F_LM_name']
+    F_LM_order = config['LM_setup']['F_LM_order']
+    sp_path = config['LM_setup']['sp_path']
+    units_path = config['LM_setup']['unit_path']
 
     path_list = contact2paths(contact_list, sp_path = sp_path, win_size = win_size, word_level = word_level)
 
-    print(path_list)
+    F_WFST_score = config['LM_setup']['F_WFST_score']
+    B_WFST_score = config['LM_setup']['B_WFST_score']
+ 
+    encoded_path_list = encode_paths(path_list, units_path)
+    print(encoded_path_list)
+    
+    F_WFST = build_F_WFST(encoded_path_list, F_WFST_score)
+    print(F_WFST)
+
+
+

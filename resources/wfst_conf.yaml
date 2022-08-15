@@ -1,9 +1,14 @@
 contact_json: 'resources/test_contact.json'
 
-token_setup:
+LM_setup:
         sp_path: 'resources/train_960_unigram5000.model'
         unit_path: 'resources/units.txt'
-
+        F_LM_name: 'F_WFST'
+        F_LM_order: 10
+        F_WFST_score: 3.0
+        B_WFST_score: 3.0
+        B_LM_name: 'B_WFST'
+        B_LM_order: 2
 
 F_WFST_setup:
         trie_base: False

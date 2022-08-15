@@ -1,0 +1,14 @@
+contact_json: 'resources/test_contact.json'
+
+token_setup:
+        sp_path: 'resources/train_960_unigram5000.model'
+        unit_path: 'resources/units.txt'
+
+
+F_WFST_setup:
+        trie_base: False
+        word_level: False
+        win_size: 999
+
+
+
